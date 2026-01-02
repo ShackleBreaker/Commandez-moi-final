@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Shopping bag body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,42h40c2,0 3.5,1.5 3.5,3.5v32c0,2 -1.5,3.5 -3.5,3.5H34c-2,0 -3.5,-1.5 -3.5,-3.5v-32c0,-2 1.5,-3.5 3.5,-3.5z"/>
+    
+    <!-- Bag handles -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#7C3AED"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M42,42v-6c0,-6.6 5.4,-12 12,-12s12,5.4 12,12v6"/>
+    
+    <!-- Check mark -->
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M45,58l8,8l16,-16l-3,-3L53,60l-5,-5z"/>
+    
+    <!-- Orange accent dot top right -->
+    <path
+        android:fillColor="#F97316"
+        android:pathData="M80,28m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0"/>
+    
+    <!-- Small yellow dot -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M88,45m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+    
+    <!-- Small orange dot bottom left -->
+    <path
+        android:fillColor="#F97316"
+        android:pathData="M25,78m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+</vector>

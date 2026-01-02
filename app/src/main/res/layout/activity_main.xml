@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/gray_bg">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="Commandez-moi"
+            app:titleTextColor="@color/orange_primary"/>
+
+        <!-- Barre de recherche -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <EditText
+                    android:id="@+id/searchInput"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:hint="🔍 Rechercher un produit..."
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/gray_text"
+                    android:background="@drawable/bg_search"
+                    android:paddingHorizontal="16dp"
+                    android:textSize="14sp"
+                    android:inputType="text"
+                    android:maxLines="1"/>
+
+                <ImageButton
+                    android:id="@+id/btnFilter"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="8dp"
+                    android:src="@drawable/ic_filter"
+                    android:background="@drawable/bg_search"
+                    android:padding="10dp"
+                    android:contentDescription="Filtres" />
+
+                <ImageButton
+                    android:id="@+id/btnSort"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="8dp"
+                    android:src="@drawable/ic_sort"
+                    android:background="@drawable/bg_search"
+                    android:padding="10dp"
+                    android:contentDescription="Trier" />
+            </LinearLayout>
+
+            <!-- Filtres catégories -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginTop="8dp">
+
+                <LinearLayout
+                    android:id="@+id/categoryContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnAll"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Tout"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        style="@style/Widget.MaterialComponents.Button"
+                        android:layout_marginEnd="6dp"/>
+
+                    <Button
+                        android:id="@+id/btnTech"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Tech"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_marginEnd="6dp"/>
+
+                    <Button
+                        android:id="@+id/btnMode"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Mode"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_marginEnd="6dp"/>
+
+                    <Button
+                        android:id="@+id/btnMaison"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Maison"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_marginEnd="6dp"/>
+
+                    <Button
+                        android:id="@+id/btnBeaute"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Beauté"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_marginEnd="6dp"/>
+
+                    <Button
+                        android:id="@+id/btnSport"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Sport"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+
+                </LinearLayout>
+            </HorizontalScrollView>
+        </LinearLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="4dp"
+                android:paddingBottom="80dp"
+                android:clipToPadding="false"/>
+
+            <!-- Empty State -->
+            <LinearLayout
+                android:id="@+id/emptyStateContainer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:src="@drawable/ic_cart"
+                    android:alpha="0.3"
+                    app:tint="@color/purple_700"/>
+
+                <TextView
+                    android:id="@+id/tvEmptyState"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Aucun produit trouvé"
+                    android:textColor="@android:color/darker_gray"
+                    android:textSize="16sp"/>
+
+            </LinearLayout>
+        </FrameLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabCart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:layout_marginBottom="72dp"
+        android:src="@drawable/ic_cart"
+        app:backgroundTint="@color/purple_700"
+        app:tint="@color/white"/>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/white"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="@color/purple_700"
+        app:itemTextColor="@color/purple_700"
+        app:labelVisibilityMode="labeled"/>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
