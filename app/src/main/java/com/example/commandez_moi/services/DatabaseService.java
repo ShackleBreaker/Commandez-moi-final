@@ -4,39 +4,31 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.example.commandez_moi.models.Product;
-import com.example.commandez_moi.models.User;
-import com.example.commandez_moi.models.CartItem;
-import com.example.commandez_moi.models.Order;
-import com.example.commandez_moi.models.Review;
-import com.example.commandez_moi.models.Message;
-import com.example.commandez_moi.models.Conversation;
-
+import com.example.commandez_moi.database.*;
+import com.example.commandez_moi.models.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
 
 public class DatabaseService {
     private static final String PREF_NAME = "CommandezMoiDB";
-    private static final String KEY_PRODUCTS = "products";
-    private static final String KEY_USERS = "users";
-    private static final String KEY_CART = "cart";
-    private static final String KEY_ORDERS = "orders";
     private static final String KEY_CURRENT_USER = "current_user";
-    private static final String KEY_FAVORITES_PREFIX = "favorites_";
-    private static final String KEY_REVIEWS = "reviews";
     private static final String KEY_MESSAGES = "messages";
     private static final String KEY_CONVERSATIONS = "conversations";
 
+    private static DatabaseService instance;
+    private Context context;
+    private AppDatabase db;
     private SharedPreferences sharedPreferences;
     private Gson gson;
-    private static DatabaseService instance;
 
     private DatabaseService(Context context) {
-        sharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        gson = new Gson();
+        this.context = context;
+        this.db = AppDatabase.getInstance(context);
+        this.sharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        this.gson = new Gson();
         initializeMockData();
     }
 
@@ -48,33 +40,79 @@ public class DatabaseService {
     }
 
     private void initializeMockData() {
-        if (getProducts().isEmpty()) {
-            List<Product> mockProducts = new ArrayList<>();
-            mockProducts.add(new Product(1, "Écouteurs sans fil", 29.99, "Tech", "Super son",
-                    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e", "seller1", "Neuf"));
-            mockProducts.add(new Product(2, "Montre Connectée", 45.00, "Tech", "GPS inclus",
-                    "https://images.unsplash.com/photo-1523275335684-37898b6baf30", "seller1", "Neuf"));
-            saveProducts(mockProducts);
+        if (db.productDao().getAll().isEmpty()) {
+            ProductEntity p1 = new ProductEntity();
+            p1.title = "Écouteurs sans fil";
+            p1.price = 29.99;
+            p1.originalPrice = 49.99;
+            p1.category = "Tech";
+            p1.description = "Super son, autonomie 20h";
+            p1.imageUrl = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e";
+            p1.sellerId = "seller1";
+            p1.condition = "Neuf";
+            p1.latitude = 48.8566;
+            p1.longitude = 2.3522;
+            p1.location = "Paris";
+            db.productDao().insert(p1);
+
+            ProductEntity p2 = new ProductEntity();
+            p2.title = "Montre Connectée";
+            p2.price = 45.00;
+            p2.originalPrice = 89.00;
+            p2.category = "Tech";
+            p2.description = "GPS inclus, étanche";
+            p2.imageUrl = "https://images.unsplash.com/photo-1523275335684-37898b6baf30";
+            p2.sellerId = "seller1";
+            p2.condition = "Neuf";
+            p2.latitude = 48.8566;
+            p2.longitude = 2.3522;
+            p2.location = "Paris";
+            db.productDao().insert(p2);
+
+            ProductEntity p3 = new ProductEntity();
+            p3.title = "Sac à main cuir";
+            p3.price = 65.00;
+            p3.category = "Mode";
+            p3.description = "Cuir véritable, fait main";
+            p3.imageUrl = "https://images.unsplash.com/photo-1584917865442-de89df76afd3";
+            p3.sellerId = "seller1";
+            p3.condition = "Neuf";
+            p3.latitude = 45.7640;
+            p3.longitude = 4.8357;
+            p3.location = "Lyon";
+            db.productDao().insert(p3);
         }
 
-        if (getUsers().isEmpty()) {
-            List<User> mockUsers = new ArrayList<>();
-            // Ajout d'un utilisateur de test par défaut
-            mockUsers.add(new User("1", "demo@test.com", "demo", "seller"));
-            mockUsers.add(new User("2", "demo@test.com", "demo", "buyer"));
-            saveUsers(mockUsers);
+        if (db.userDao().getByEmail("demo@test.com") == null) {
+            UserEntity seller = new UserEntity();
+            seller.id = "seller1";
+            seller.email = "vendeur@test.com";
+            seller.password = "demo";
+            seller.name = "Vendeur Demo";
+            seller.role = "seller";
+            seller.latitude = 48.8566;
+            seller.longitude = 2.3522;
+            seller.location = "Paris";
+            db.userDao().insert(seller);
+
+            UserEntity buyer = new UserEntity();
+            buyer.id = "buyer1";
+            buyer.email = "demo@test.com";
+            buyer.password = "demo";
+            buyer.name = "Acheteur Demo";
+            buyer.role = "buyer";
+            db.userDao().insert(buyer);
         }
     }
 
-    // --- GESTION UTILISATEURS & LOGIN ---
+    // ============== UTILISATEURS ==============
 
     public User login(String email, String password) {
-        List<User> users = getUsers();
-        for (User user : users) {
-            if (user.getEmail().equalsIgnoreCase(email)) {
-                setCurrentUser(user);
-                return user;
-            }
+        UserEntity entity = db.userDao().login(email, password);
+        if (entity != null) {
+            User user = entityToUser(entity);
+            setCurrentUser(user);
+            return user;
         }
         return null;
     }
@@ -95,312 +133,311 @@ public class DatabaseService {
         sharedPreferences.edit().remove(KEY_CURRENT_USER).apply();
     }
 
-    public List<User> getUsers() {
-        String json = sharedPreferences.getString(KEY_USERS, null);
-        Type type = new TypeToken<ArrayList<User>>() {
-        }.getType();
-        return json == null ? new ArrayList<>() : gson.fromJson(json, type);
+    public void registerUser(User user) {
+        UserEntity entity = userToEntity(user);
+        db.userDao().insert(entity);
     }
 
-    public void saveUsers(List<User> users) {
-        String json = gson.toJson(users);
-        sharedPreferences.edit().putString(KEY_USERS, json).apply();
+    public boolean emailExists(String email) {
+        return db.userDao().getByEmail(email) != null;
     }
 
-    // --- GESTION PRODUITS ---
+    public void updateUserLocation(String userId, double lat, double lng, String location) {
+        db.userDao().updateLocation(userId, lat, lng, location);
+        // Update current user if it's the same
+        User currentUser = getCurrentUser();
+        if (currentUser != null && currentUser.getId().equals(userId)) {
+            currentUser.setLatitude(lat);
+            currentUser.setLongitude(lng);
+            currentUser.setLocation(location);
+            setCurrentUser(currentUser);
+        }
+    }
+
+    public void updateProfileImage(String userId, String imageUrl) {
+        db.userDao().updateProfileImage(userId, imageUrl);
+        User currentUser = getCurrentUser();
+        if (currentUser != null && currentUser.getId().equals(userId)) {
+            currentUser.setProfileImage(imageUrl);
+            setCurrentUser(currentUser);
+        }
+    }
+
+    public User getUserById(String id) {
+        UserEntity entity = db.userDao().getById(id);
+        return entity != null ? entityToUser(entity) : null;
+    }
+
+    public void updateUser(User user) {
+        UserEntity entity = userToEntity(user);
+        db.userDao().insert(entity);
+
+        User currentUser = getCurrentUser();
+        if (currentUser != null && currentUser.getId().equals(user.getId())) {
+            setCurrentUser(user);
+        }
+    }
+
+    // ============== PRODUITS ==============
 
     public List<Product> getProducts() {
-        String json = sharedPreferences.getString(KEY_PRODUCTS, null);
-        Type type = new TypeToken<ArrayList<Product>>() {
-        }.getType();
-        return json == null ? new ArrayList<>() : gson.fromJson(json, type);
+        List<ProductEntity> entities = db.productDao().getAll();
+        return entitiesToProducts(entities);
     }
 
-    public void saveProducts(List<Product> products) {
-        String json = gson.toJson(products);
-        sharedPreferences.edit().putString(KEY_PRODUCTS, json).apply();
+    public List<Product> getProductsByCategory(String category) {
+        if (category == null || category.equals("Tout"))
+            return getProducts();
+        List<ProductEntity> entities = db.productDao().getByCategory(category);
+        return entitiesToProducts(entities);
     }
 
-    public void addProduct(Product product) {
-        List<Product> products = getProducts();
-        products.add(product);
-        saveProducts(products);
+    public List<Product> getProductsBySeller(String sellerId) {
+        List<ProductEntity> entities = db.productDao().getBySeller(sellerId);
+        return entitiesToProducts(entities);
     }
 
-    // --- GESTION PANIER ---
-
-    public List<CartItem> getCart() {
-        String json = sharedPreferences.getString(KEY_CART, null);
-        Type type = new TypeToken<ArrayList<CartItem>>() {
-        }.getType();
-        return json == null ? new ArrayList<>() : gson.fromJson(json, type);
+    public List<Product> searchProducts(String query) {
+        List<ProductEntity> entities = db.productDao().search(query);
+        return entitiesToProducts(entities);
     }
 
-    public void saveCart(List<CartItem> cartItems) {
-        String json = gson.toJson(cartItems);
-        sharedPreferences.edit().putString(KEY_CART, json).apply();
+    public List<Product> getNearbyProducts(double lat, double lng, double radiusKm) {
+        double delta = radiusKm / 111.0;
+        List<ProductEntity> entities = db.productDao().getNearby(
+                lat - delta, lat + delta, lng - delta, lng + delta);
+        return entitiesToProducts(entities);
     }
 
-    public void addToCart(Product product) {
-        List<CartItem> cart = getCart();
-        boolean found = false;
-        for (CartItem item : cart) {
-            if (item.getId() == product.getId()) {
-                item.setQuantity(item.getQuantity() + 1);
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            // Conversion Product -> CartItem
-            CartItem newItem = new CartItem();
-            newItem.setId(product.getId());
-            newItem.setTitle(product.getTitle());
-            newItem.setPrice(product.getPrice());
-            newItem.setImageUrl(product.getImageUrl());
-            newItem.setSellerId(product.getSellerId());
-            newItem.setQuantity(1);
-            newItem.setSellerStatus("En attente");
-            cart.add(newItem);
-        }
-        saveCart(cart);
-    }
-
-    public void clearCart() {
-        sharedPreferences.edit().remove(KEY_CART).apply();
-    }
-
-    // --- GESTION COMMANDES ---
-
-    public List<Order> getOrders() {
-        String json = sharedPreferences.getString(KEY_ORDERS, null);
-        Type type = new TypeToken<ArrayList<Order>>() {
-        }.getType();
-        return json == null ? new ArrayList<>() : gson.fromJson(json, type);
-    }
-
-    public void saveOrder(Order order) {
-        List<Order> orders = getOrders();
-        orders.add(order);
-        String json = gson.toJson(orders);
-        sharedPreferences.edit().putString(KEY_ORDERS, json).apply();
-    }
-
-    public void updateOrderItemStatus(String orderId, int itemId, String status) {
-        List<Order> orders = getOrders();
-        for (Order order : orders) {
-            if (order.getId().equals(orderId)) {
-                for (CartItem item : order.getItems()) {
-                    if (item.getId() == itemId) {
-                        item.setSellerStatus(status);
-                    }
-                }
-            }
-        }
-        String json = gson.toJson(orders);
-        sharedPreferences.edit().putString(KEY_ORDERS, json).apply();
-    }
-
-    // --- GESTION FAVORIS ---
-
-    public void addToFavorites(String userId, int productId) {
-        Set<String> favorites = getFavoriteIds(userId);
-        favorites.add(String.valueOf(productId));
-        saveFavorites(userId, favorites);
-    }
-
-    public void removeFromFavorites(String userId, int productId) {
-        Set<String> favorites = getFavoriteIds(userId);
-        favorites.remove(String.valueOf(productId));
-        saveFavorites(userId, favorites);
-    }
-
-    public boolean isProductFavorite(String userId, int productId) {
-        Set<String> favorites = getFavoriteIds(userId);
-        return favorites.contains(String.valueOf(productId));
-    }
-
-    public void toggleFavorite(String userId, int productId) {
-        if (isProductFavorite(userId, productId)) {
-            removeFromFavorites(userId, productId);
-        } else {
-            addToFavorites(userId, productId);
-        }
-    }
-
-    private Set<String> getFavoriteIds(String userId) {
-        String json = sharedPreferences.getString(KEY_FAVORITES_PREFIX + userId, null);
-        if (json == null) {
-            return new HashSet<>();
-        }
-        Type type = new TypeToken<HashSet<String>>() {
-        }.getType();
-        return gson.fromJson(json, type);
-    }
-
-    private void saveFavorites(String userId, Set<String> favoriteIds) {
-        String json = gson.toJson(favoriteIds);
-        sharedPreferences.edit().putString(KEY_FAVORITES_PREFIX + userId, json).apply();
+    public List<Product> getFavorites() {
+        List<ProductEntity> entities = db.productDao().getFavorites();
+        return entitiesToProducts(entities);
     }
 
     public List<Product> getFavoriteProducts(String userId) {
-        Set<String> favoriteIds = getFavoriteIds(userId);
-        List<Product> allProducts = getProducts();
-        List<Product> favorites = new ArrayList<>();
-
-        for (Product product : allProducts) {
-            if (favoriteIds.contains(String.valueOf(product.getId()))) {
-                product.setFavorite(true);
-                favorites.add(product);
-            }
-        }
-        return favorites;
-    }
-
-    // --- HELPERS ---
-
-    public boolean isLoggedIn() {
-        return getCurrentUser() != null;
-    }
-
-    public String getCurrentUserId() {
-        User user = getCurrentUser();
-        return user != null ? user.getId() : null;
-    }
-
-    public boolean isSeller() {
-        User user = getCurrentUser();
-        return user != null && "seller".equals(user.getRole());
-    }
-
-    public int getCartCount() {
-        List<CartItem> cart = getCart();
-        int count = 0;
-        for (CartItem item : cart) {
-            count += item.getQuantity();
-        }
-        return count;
+        return getFavorites();
     }
 
     public Product getProductById(int id) {
-        List<Product> products = getProducts();
-        for (Product product : products) {
-            if (product.getId() == id) {
-                return product;
-            }
-        }
-        return null;
+        ProductEntity entity = db.productDao().getById(id);
+        return entity != null ? entityToProduct(entity) : null;
     }
 
-    public void updateProduct(Product updatedProduct) {
-        List<Product> products = getProducts();
-        for (int i = 0; i < products.size(); i++) {
-            if (products.get(i).getId() == updatedProduct.getId()) {
-                products.set(i, updatedProduct);
-                break;
-            }
-        }
-        saveProducts(products);
+    public void addProduct(Product product) {
+        ProductEntity entity = productToEntity(product);
+        db.productDao().insert(entity);
+    }
+
+    public void updateProduct(Product product) {
+        ProductEntity entity = productToEntity(product);
+        entity.id = product.getId();
+        db.productDao().update(entity);
     }
 
     public void deleteProduct(int productId) {
-        List<Product> products = getProducts();
-        products.removeIf(p -> p.getId() == productId);
-        saveProducts(products);
+        db.productDao().deleteById(productId);
     }
 
-    public User getUserById(String userId) {
-        List<User> users = getUsers();
-        for (User user : users) {
-            if (user.getId().equals(userId)) {
-                return user;
+    public void toggleFavorite(String userId, int productId) {
+        ProductEntity entity = db.productDao().getById(productId);
+        if (entity != null) {
+            db.productDao().setFavorite(productId, !entity.isFavorite);
+        }
+    }
+
+    public void addToFavorites(String userId, int productId) {
+        db.productDao().setFavorite(productId, true);
+    }
+
+    public void removeFromFavorites(String userId, int productId) {
+        db.productDao().setFavorite(productId, false);
+    }
+
+    public boolean isProductFavorite(String userId, int productId) {
+        ProductEntity entity = db.productDao().getById(productId);
+        return entity != null && entity.isFavorite;
+    }
+
+    // ============== PANIER ==============
+
+    public List<CartItem> getCart() {
+        User user = getCurrentUser();
+        if (user == null)
+            return new ArrayList<>();
+
+        List<CartItemEntity> entities = db.cartDao().getByUser(user.getId());
+        List<CartItem> items = new ArrayList<>();
+        for (CartItemEntity e : entities) {
+            CartItem item = new CartItem();
+            item.setId(e.productId);
+            item.setTitle(e.title);
+            item.setPrice(e.price);
+            item.setImageUrl(e.imageUrl);
+            item.setQuantity(e.quantity);
+            item.setSellerId(e.sellerId);
+            item.setSellerStatus(e.sellerStatus);
+            items.add(item);
+        }
+        return items;
+    }
+
+    public int getCartCount() {
+        User user = getCurrentUser();
+        if (user == null)
+            return 0;
+        return db.cartDao().getCartCount(user.getId());
+    }
+
+    public void addToCart(Product product) {
+        User user = getCurrentUser();
+        if (user == null)
+            return;
+
+        CartItemEntity existing = db.cartDao().getByUserAndProduct(user.getId(), product.getId());
+        if (existing != null) {
+            db.cartDao().updateQuantity(existing.id, existing.quantity + 1);
+        } else {
+            CartItemEntity item = new CartItemEntity();
+            item.productId = product.getId();
+            item.title = product.getTitle();
+            item.price = product.getPrice();
+            item.imageUrl = product.getImageUrl();
+            item.sellerId = product.getSellerId();
+            item.userId = user.getId();
+            item.quantity = 1;
+            item.sellerStatus = "En attente";
+            db.cartDao().insert(item);
+        }
+    }
+
+    public void updateCartItemQuantity(int productId, int quantity) {
+        User user = getCurrentUser();
+        if (user == null)
+            return;
+
+        CartItemEntity item = db.cartDao().getByUserAndProduct(user.getId(), productId);
+        if (item != null) {
+            if (quantity <= 0) {
+                db.cartDao().delete(item);
+            } else {
+                db.cartDao().updateQuantity(item.id, quantity);
             }
         }
-        return null;
     }
 
-    public void updateUser(User updatedUser) {
-        List<User> users = getUsers();
-        for (int i = 0; i < users.size(); i++) {
-            if (users.get(i).getId().equals(updatedUser.getId())) {
-                users.set(i, updatedUser);
-                break;
+    public void removeFromCart(int productId) {
+        User user = getCurrentUser();
+        if (user == null)
+            return;
+
+        CartItemEntity item = db.cartDao().getByUserAndProduct(user.getId(), productId);
+        if (item != null) {
+            db.cartDao().delete(item);
+        }
+    }
+
+    public void removeFromCart(Product product) {
+        removeFromCart(product.getId());
+    }
+
+    public void clearCart() {
+        User user = getCurrentUser();
+        if (user == null)
+            return;
+        db.cartDao().clearCart(user.getId());
+    }
+
+    // ============== COMMANDES ==============
+
+    public List<Order> getOrders() {
+        List<OrderEntity> entities = db.orderDao().getAll();
+        return entitiesToOrders(entities);
+    }
+
+    public List<Order> getOrdersByBuyer(String buyerId) {
+        List<OrderEntity> entities = db.orderDao().getByBuyer(buyerId);
+        return entitiesToOrders(entities);
+    }
+
+    public List<Order> getOrdersBySeller(String sellerId) {
+        List<OrderEntity> entities = db.orderDao().getBySeller(sellerId);
+        return entitiesToOrders(entities);
+    }
+
+    public void saveOrder(Order order) {
+        OrderEntity entity = new OrderEntity();
+        entity.id = order.getId();
+        entity.buyerId = order.getBuyerId();
+        entity.total = order.getTotal();
+        entity.status = order.getStatus();
+        entity.itemsJson = gson.toJson(order.getItems());
+        entity.createdAt = System.currentTimeMillis();
+        db.orderDao().insert(entity);
+    }
+
+    public void createOrder(Order order) {
+        saveOrder(order);
+    }
+
+    public void updateOrderStatus(String orderId, String status) {
+        db.orderDao().updateStatus(orderId, status, System.currentTimeMillis());
+    }
+
+    public void updateOrderItemStatus(String orderId, int itemId, String status) {
+        OrderEntity entity = db.orderDao().getById(orderId);
+        if (entity != null) {
+            Type type = new TypeToken<List<CartItem>>() {
+            }.getType();
+            List<CartItem> items = gson.fromJson(entity.itemsJson, type);
+            for (CartItem item : items) {
+                if (item.getId() == itemId) {
+                    item.setSellerStatus(status);
+                }
             }
-        }
-        saveUsers(users);
-
-        // Mettre à jour l'utilisateur courant si c'est lui qui est modifié
-        User currentUser = getCurrentUser();
-        if (currentUser != null && currentUser.getId().equals(updatedUser.getId())) {
-            setCurrentUser(updatedUser);
+            entity.itemsJson = gson.toJson(items);
+            entity.updatedAt = System.currentTimeMillis();
+            db.orderDao().update(entity);
         }
     }
 
-    // --- GESTION DES AVIS (REVIEWS) ---
+    // ============== AVIS / REVIEWS ==============
 
-    public List<Review> getAllReviews() {
-        String json = sharedPreferences.getString(KEY_REVIEWS, null);
-        Type type = new TypeToken<ArrayList<Review>>() {
-        }.getType();
-        return json == null ? new ArrayList<>() : gson.fromJson(json, type);
-    }
+    public void addReview(Review review) {
+        ReviewEntity entity = new ReviewEntity();
+        try {
+            entity.productId = Integer.parseInt(review.getProductId());
+        } catch (NumberFormatException e) {
+            return;
+        }
+        entity.oderId = review.getUserId();
+        entity.reviewerName = review.getUserName();
+        entity.reviewerImage = review.getUserPhoto();
+        entity.rating = review.getRating();
+        entity.comment = review.getComment();
+        db.reviewDao().insert(entity);
 
-    private void saveAllReviews(List<Review> reviews) {
-        String json = gson.toJson(reviews);
-        sharedPreferences.edit().putString(KEY_REVIEWS, json).apply();
+        float avgRating = db.reviewDao().getAverageRating(entity.productId);
+        int count = db.reviewDao().getReviewCount(entity.productId);
+        db.productDao().updateRating(entity.productId, avgRating, count);
     }
 
     public List<Review> getReviews(String productId) {
-        List<Review> allReviews = getAllReviews();
-        List<Review> productReviews = new ArrayList<>();
-        for (Review review : allReviews) {
-            if (review.getProductId().equals(productId)) {
-                productReviews.add(review);
+        try {
+            int id = Integer.parseInt(productId);
+            List<ReviewEntity> entities = db.reviewDao().getByProduct(id);
+            List<Review> reviews = new ArrayList<>();
+            for (ReviewEntity e : entities) {
+                Review r = new Review(String.valueOf(e.productId), e.oderId, e.reviewerName, e.rating, e.comment);
+                r.setUserPhoto(e.reviewerImage);
+                reviews.add(r);
             }
+            return reviews;
+        } catch (NumberFormatException e) {
+            return new ArrayList<>();
         }
-        return productReviews;
     }
 
-    public void addReview(Review review) {
-        List<Review> allReviews = getAllReviews();
-
-        // Vérifier si l'utilisateur a déjà un avis pour ce produit (mise à jour)
-        boolean found = false;
-        for (int i = 0; i < allReviews.size(); i++) {
-            Review r = allReviews.get(i);
-            if (r.getProductId().equals(review.getProductId()) && r.getUserId().equals(review.getUserId())) {
-                allReviews.set(i, review);
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            allReviews.add(review);
-        }
-
-        saveAllReviews(allReviews);
-    }
-
-    public void deleteReview(String reviewId) {
-        List<Review> allReviews = getAllReviews();
-        allReviews.removeIf(r -> r.getId().equals(reviewId));
-        saveAllReviews(allReviews);
-    }
-
-    public float getProductAverageRating(String productId) {
-        List<Review> productReviews = getReviews(productId);
-        if (productReviews.isEmpty()) {
-            return 0;
-        }
-        float sum = 0;
-        for (Review review : productReviews) {
-            sum += review.getRating();
-        }
-        return sum / productReviews.size();
-    }
-
-    // --- GESTION DES MESSAGES ET CONVERSATIONS ---
+    // ============== MESSAGES (SharedPreferences) ==============
 
     private List<Message> getAllMessages() {
         String json = sharedPreferences.getString(KEY_MESSAGES, null);
@@ -426,12 +463,10 @@ public class DatabaseService {
     }
 
     public void sendMessage(Message message, String productId, String productTitle, String otherUserName) {
-        // Save message
         List<Message> allMessages = getAllMessages();
         allMessages.add(message);
         saveAllMessages(allMessages);
 
-        // Update or create conversation
         Conversation conversation = getConversation(message.getConversationId());
         if (conversation == null) {
             User currentUser = getCurrentUser();
@@ -495,7 +530,6 @@ public class DatabaseService {
                 userConversations.add(conv);
             }
         }
-        // Sort by last message time (newest first)
         userConversations.sort((c1, c2) -> Long.compare(c2.getLastMessageTime(), c1.getLastMessageTime()));
         return userConversations;
     }
@@ -519,5 +553,98 @@ public class DatabaseService {
             }
         }
         return count;
+    }
+
+    // ============== CONVERSIONS ==============
+
+    private User entityToUser(UserEntity e) {
+        User u = new User(e.id, e.email, e.password, e.role);
+        u.setName(e.name);
+        u.setProfileImage(e.profileImage);
+        u.setLatitude(e.latitude);
+        u.setLongitude(e.longitude);
+        u.setLocation(e.location);
+        return u;
+    }
+
+    private UserEntity userToEntity(User u) {
+        UserEntity e = new UserEntity();
+        e.id = u.getId();
+        e.email = u.getEmail();
+        e.password = u.getPassword();
+        e.name = u.getName();
+        e.role = u.getRole();
+        e.profileImage = u.getProfileImage();
+        e.latitude = u.getLatitude();
+        e.longitude = u.getLongitude();
+        e.location = u.getLocation();
+        return e;
+    }
+
+    private Product entityToProduct(ProductEntity e) {
+        Product p = new Product(e.id, e.title, e.price, e.category,
+                e.description, e.imageUrl, e.sellerId, e.condition);
+        p.setOriginalPrice(e.originalPrice);
+        p.setAdditionalImages(e.additionalImages);
+        p.setLatitude(e.latitude);
+        p.setLongitude(e.longitude);
+        p.setLocation(e.location);
+        p.setRating(e.rating);
+        p.setRatingCount(e.ratingCount);
+        p.setFavorite(e.isFavorite);
+        return p;
+    }
+
+    private ProductEntity productToEntity(Product p) {
+        ProductEntity e = new ProductEntity();
+        e.title = p.getTitle();
+        e.price = p.getPrice();
+        e.originalPrice = p.getOriginalPrice();
+        e.category = p.getCategory();
+        e.description = p.getDescription();
+        e.imageUrl = p.getImageUrl();
+        e.additionalImages = p.getAdditionalImages();
+        e.sellerId = p.getSellerId();
+        e.condition = p.getCondition();
+        e.latitude = p.getLatitude();
+        e.longitude = p.getLongitude();
+        e.location = p.getLocation();
+        return e;
+    }
+
+    private List<Product> entitiesToProducts(List<ProductEntity> entities) {
+        List<Product> products = new ArrayList<>();
+        for (ProductEntity e : entities) {
+            products.add(entityToProduct(e));
+        }
+        return products;
+    }
+
+    private List<Order> entitiesToOrders(List<OrderEntity> entities) {
+        List<Order> orders = new ArrayList<>();
+        Type type = new TypeToken<List<CartItem>>() {
+        }.getType();
+        for (OrderEntity e : entities) {
+            List<CartItem> items = gson.fromJson(e.itemsJson, type);
+            Order o = new Order(e.id,
+                    new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new java.util.Date(e.createdAt)),
+                    e.total, items, e.status, e.buyerId);
+            orders.add(o);
+        }
+        return orders;
+    }
+
+    public boolean isLoggedIn() {
+        return getCurrentUser() != null;
+    }
+
+    public String getCurrentUserId() {
+        User user = getCurrentUser();
+        return user != null ? user.getId() : null;
+    }
+
+    public boolean isSeller() {
+        User user = getCurrentUser();
+        return user != null && "seller".equals(user.getRole());
     }
 }

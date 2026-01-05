@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/gray_bg">
+    android:background="?android:colorBackground">
 
     <!-- Header -->
     <LinearLayout
@@ -91,7 +91,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="@android:color/white"
+        android:background="?colorSurface"
         android:padding="8dp"
         android:gravity="center_vertical"
         android:elevation="8dp">
@@ -102,8 +102,8 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Écrire un message..."
-            android:textColor="@color/black"
-            android:textColorHint="@color/gray_text"
+            android:textColor="?android:textColorPrimary"
+            android:textColorHint="?android:textColorSecondary"
             android:background="@drawable/bg_search"
             android:padding="12dp"
             android:maxLines="4"

@@ -15,6 +15,7 @@ import com.example.commandez_moi.models.CartItem;
 import com.example.commandez_moi.models.Order;
 import com.example.commandez_moi.models.User;
 import com.example.commandez_moi.services.DatabaseService;
+import com.example.commandez_moi.utils.ThemeManager;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -34,6 +35,7 @@ public class CartActivity extends AppCompatActivity implements CartAdapter.CartL
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_cart);
 
         db = DatabaseService.getInstance(this);
@@ -116,7 +118,7 @@ public class CartActivity extends AppCompatActivity implements CartAdapter.CartL
     @Override
     public void onQuantityChanged(CartItem item, int newQuantity) {
         item.setQuantity(newQuantity);
-        db.saveCart(cartItems);
+        db.updateCartItemQuantity(item.getId(), newQuantity);
         adapter.notifyDataSetChanged();
         updateTotal();
     }
@@ -124,7 +126,7 @@ public class CartActivity extends AppCompatActivity implements CartAdapter.CartL
     @Override
     public void onRemove(CartItem item) {
         cartItems.remove(item);
-        db.saveCart(cartItems);
+        db.removeFromCart(item.getId());
         adapter.notifyDataSetChanged();
         updateTotal();
     }

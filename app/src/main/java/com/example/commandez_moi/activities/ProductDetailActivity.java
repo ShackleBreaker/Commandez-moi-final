@@ -18,6 +18,7 @@ import com.example.commandez_moi.models.Product;
 import com.example.commandez_moi.models.Review;
 import com.example.commandez_moi.models.User;
 import com.example.commandez_moi.services.DatabaseService;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.example.commandez_moi.utils.ImageUtils;
 
 import java.util.List;
@@ -41,6 +42,7 @@ public class ProductDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_product_detail);
 
         db = DatabaseService.getInstance(this);

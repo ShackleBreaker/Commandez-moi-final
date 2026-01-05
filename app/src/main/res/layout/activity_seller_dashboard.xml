@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/gray_bg">
+    android:background="?android:colorBackground">
 
     <TextView
         android:layout_width="match_parent"
@@ -13,7 +13,8 @@
         android:textSize="20sp"
         android:textStyle="bold"
         android:padding="16dp"
-        android:background="@color/white"/>
+        android:background="?colorSurface"
+        android:textColor="?android:textColorPrimary"/>
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"

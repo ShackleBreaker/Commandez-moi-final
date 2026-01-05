@@ -13,6 +13,7 @@ import com.example.commandez_moi.R;
 import com.example.commandez_moi.adapters.ProductAdapter;
 import com.example.commandez_moi.models.Product;
 import com.example.commandez_moi.services.DatabaseService;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.google.android.material.appbar.MaterialToolbar;
 
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class FavoritesActivity extends AppCompatActivity implements ProductAdapt
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_favorites);
 
         databaseService = DatabaseService.getInstance(this);

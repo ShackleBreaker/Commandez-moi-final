@@ -17,7 +17,9 @@ import com.example.commandez_moi.models.CartItem;
 import com.example.commandez_moi.models.Order;
 import com.example.commandez_moi.models.User;
 import com.example.commandez_moi.services.DatabaseService;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.example.commandez_moi.utils.ImageUtils;
+import com.google.android.material.tabs.TabLayout;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,10 +30,13 @@ public class OrderHistoryActivity extends AppCompatActivity {
     private TextView emptyText;
     private DatabaseService db;
     private User currentUser;
+    private TabLayout tabLayout;
+    private List<Order> allMyOrders = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_order_history);
 
         db = DatabaseService.getInstance(this);
@@ -45,11 +50,27 @@ public class OrderHistoryActivity extends AppCompatActivity {
         }
         toolbar.setNavigationOnClickListener(v -> finish());
 
+        tabLayout = findViewById(R.id.tabLayout);
         recyclerView = findViewById(R.id.ordersRecyclerView);
         emptyText = findViewById(R.id.emptyText);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         loadOrders();
+
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                filterOrders(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
     }
 
     private void loadOrders() {
@@ -59,24 +80,90 @@ public class OrderHistoryActivity extends AppCompatActivity {
         }
 
         List<Order> allOrders = db.getOrders();
-        List<Order> myOrders = new ArrayList<>();
+        allMyOrders.clear();
 
         for (Order order : allOrders) {
             if (currentUser.getId().equals(order.getBuyerId())) {
-                myOrders.add(order);
+                allMyOrders.add(order);
             }
         }
 
         // Trier par date (plus récentes en premier)
-        Collections.reverse(myOrders);
+        Collections.reverse(allMyOrders);
 
-        if (myOrders.isEmpty()) {
+        // Initial filter
+        filterOrders(tabLayout.getSelectedTabPosition());
+    }
+
+    private void filterOrders(int tabPosition) {
+        List<Order> filteredList = new ArrayList<>();
+
+        if (tabPosition == 0) { // Toutes
+            filteredList.addAll(allMyOrders);
+        } else {
+            for (Order order : allMyOrders) {
+                List<CartItem> items = order.getItems();
+
+                // Fallback logic if no items
+                if (items == null || items.isEmpty()) {
+                    String status = order.getStatus();
+                    if (tabPosition == 1) { // En attente
+                        if (status == null || status.equalsIgnoreCase("En cours") ||
+                                status.equalsIgnoreCase("En attente") || status.equalsIgnoreCase("Pending")) {
+                            filteredList.add(order);
+                        }
+                    }
+                    continue;
+                }
+
+                boolean hasPending = false;
+                boolean hasConfirmed = false;
+                boolean allDelivered = true;
+                boolean hasDelivered = false;
+
+                for (CartItem item : items) {
+                    String s = item.getSellerStatus();
+                    if (s == null || s.equalsIgnoreCase("En attente") || s.equalsIgnoreCase("En cours")) {
+                        hasPending = true;
+                        allDelivered = false;
+                    } else if (s.equalsIgnoreCase("Confirmé") || s.equalsIgnoreCase("Confirmed")) {
+                        hasConfirmed = true;
+                        allDelivered = false;
+                    } else if (s.equalsIgnoreCase("Livré") || s.equalsIgnoreCase("Delivered")) {
+                        hasConfirmed = true;
+                        hasDelivered = true;
+                    } else if (s.equalsIgnoreCase("Rejeté")) {
+                        allDelivered = false;
+                    }
+                }
+
+                if (tabPosition == 1) { // En attente
+                    if (hasPending) {
+                        filteredList.add(order);
+                    }
+                } else if (tabPosition == 2) { // Confirmées
+                    if (!hasPending && hasConfirmed) {
+                        filteredList.add(order);
+                    }
+                } else if (tabPosition == 3) { // Livrées
+                    if (allDelivered && hasDelivered) {
+                        filteredList.add(order);
+                    }
+                }
+            }
+        }
+
+        updateRecyclerView(filteredList);
+    }
+
+    private void updateRecyclerView(List<Order> orders) {
+        if (orders.isEmpty()) {
             emptyText.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
         } else {
             emptyText.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
-            recyclerView.setAdapter(new OrdersAdapter(myOrders));
+            recyclerView.setAdapter(new OrdersAdapter(orders));
         }
     }
 

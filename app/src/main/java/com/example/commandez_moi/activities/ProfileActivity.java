@@ -18,6 +18,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
 
 import com.bumptech.glide.Glide;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.example.commandez_moi.R;
 import com.example.commandez_moi.models.Order;
 import com.example.commandez_moi.models.Product;
@@ -32,22 +33,25 @@ public class ProfileActivity extends AppCompatActivity {
 
     private static final int PICK_IMAGE = 101;
 
-    private TextView userName, userEmail, userRole;
+    private TextView userName, userEmail, userRole, userLocation;
     private TextView tvProductCount, tvSalesCount, tvRating;
     private Button btnAddProduct, btnDashboard, btnOrderHistory, btnLogout, btnManageProducts;
     private View sellerSection;
     private CardView statsCard;
-    private ImageView profileImage, btnEditPhoto;
+    private ImageView profileImage, btnEditPhoto, btnEditLocation;
     private DatabaseService db;
     private User currentUser;
+    private com.example.commandez_moi.utils.LocationHelper locationHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_profile);
 
         db = DatabaseService.getInstance(this);
         currentUser = db.getCurrentUser();
+        locationHelper = new com.example.commandez_moi.utils.LocationHelper(this);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -61,6 +65,7 @@ public class ProfileActivity extends AppCompatActivity {
         userName = findViewById(R.id.userName);
         userEmail = findViewById(R.id.userEmail);
         userRole = findViewById(R.id.userRole);
+        userLocation = findViewById(R.id.userLocation);
         btnAddProduct = findViewById(R.id.btnAddProduct);
         btnDashboard = findViewById(R.id.btnDashboard);
         btnOrderHistory = findViewById(R.id.btnOrderHistory);
@@ -70,6 +75,7 @@ public class ProfileActivity extends AppCompatActivity {
         statsCard = findViewById(R.id.statsCard);
         profileImage = findViewById(R.id.profileImage);
         btnEditPhoto = findViewById(R.id.btnEditPhoto);
+        btnEditLocation = findViewById(R.id.btnEditLocation);
         tvProductCount = findViewById(R.id.tvProductCount);
         tvSalesCount = findViewById(R.id.tvSalesCount);
         tvRating = findViewById(R.id.tvRating);
@@ -84,6 +90,12 @@ public class ProfileActivity extends AppCompatActivity {
 
         userEmail.setText(currentUser.getEmail());
         userName.setText(currentUser.getName() != null ? currentUser.getName() : currentUser.getEmail().split("@")[0]);
+
+        if (currentUser.getLocation() != null && !currentUser.getLocation().isEmpty()) {
+            userLocation.setText(currentUser.getLocation());
+        } else {
+            userLocation.setText("Localisation non définie");
+        }
 
         // Photo de profil
         if (currentUser.getProfileImage() != null && !currentUser.getProfileImage().isEmpty()) {
@@ -142,6 +154,10 @@ public class ProfileActivity extends AppCompatActivity {
             profileImage.setOnClickListener(v -> pickProfileImage());
         }
 
+        if (btnEditLocation != null) {
+            btnEditLocation.setOnClickListener(v -> showLocationDialog());
+        }
+
         btnAddProduct.setOnClickListener(v -> startActivity(new Intent(this, AddProductActivity.class)));
 
         btnDashboard.setOnClickListener(v -> startActivity(new Intent(this, SellerDashboardActivity.class)));
@@ -195,6 +211,92 @@ public class ProfileActivity extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
                 Toast.makeText(this, "Erreur lors du chargement de l'image", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void showLocationDialog() {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Modifier la localisation");
+
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+        input.setHint("Entrez votre ville ou adresse");
+        if (currentUser.getLocation() != null) {
+            input.setText(currentUser.getLocation());
+        }
+        builder.setView(input);
+
+        builder.setPositiveButton("Enregistrer", (dialog, which) -> {
+            String newLocation = input.getText().toString().trim();
+            if (!newLocation.isEmpty()) {
+                updateLocation(newLocation);
+            }
+        });
+        builder.setNegativeButton("Annuler", (dialog, which) -> dialog.cancel());
+        builder.setNeutralButton("Utiliser ma position actuelle", (dialog, which) -> {
+            useCurrentLocation();
+        });
+
+        builder.show();
+    }
+
+    private void updateLocation(String locationName) {
+        locationHelper.getCoordinatesFromAddress(locationName,
+                new com.example.commandez_moi.utils.LocationHelper.LocationListener() {
+                    @Override
+                    public void onLocationReceived(double latitude, double longitude, String address) {
+                        currentUser.setLocation(address);
+                        currentUser.setLatitude(latitude);
+                        currentUser.setLongitude(longitude);
+                        db.updateUser(currentUser);
+                        userLocation.setText(address);
+                        Toast.makeText(ProfileActivity.this, "Localisation mise à jour", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onLocationError(String error) {
+                        currentUser.setLocation(locationName);
+                        db.updateUser(currentUser);
+                        userLocation.setText(locationName);
+                        Toast.makeText(ProfileActivity.this, "Localisation mise à jour (sans coordonnées précises)",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void useCurrentLocation() {
+        if (locationHelper.hasLocationPermission()) {
+            locationHelper.getCurrentLocation(new com.example.commandez_moi.utils.LocationHelper.LocationListener() {
+                @Override
+                public void onLocationReceived(double latitude, double longitude, String address) {
+                    currentUser.setLocation(address);
+                    currentUser.setLatitude(latitude);
+                    currentUser.setLongitude(longitude);
+                    db.updateUser(currentUser);
+                    userLocation.setText(address);
+                    Toast.makeText(ProfileActivity.this, "Localisation mise à jour", Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onLocationError(String error) {
+                    Toast.makeText(ProfileActivity.this, "Erreur: " + error, Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            locationHelper.requestLocationPermission(this);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @androidx.annotation.NonNull String[] permissions,
+            @androidx.annotation.NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == com.example.commandez_moi.utils.LocationHelper.LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                useCurrentLocation();
+            } else {
+                Toast.makeText(this, "Permission refusée", Toast.LENGTH_SHORT).show();
             }
         }
     }

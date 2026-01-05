@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/gray_bg">
+    android:background="?android:colorBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,6 +16,7 @@
             android:text="Mettre en vente"
             android:textSize="24sp"
             android:textStyle="bold"
+            android:textColor="?android:textColorPrimary"
             android:layout_marginBottom="20dp"/>
 
         <FrameLayout
@@ -44,8 +45,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Titre de l'article"
-            android:textColor="@color/black"
-            android:textColorHint="@color/gray_text"
+            android:textColor="?android:textColorPrimary"
+            android:textColorHint="?android:textColorSecondary"
             android:minHeight="48dp"
             android:layout_marginBottom="12dp"/>
 
@@ -54,8 +55,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Prix (€)"
-            android:textColor="@color/black"
-            android:textColorHint="@color/gray_text"
+            android:textColor="?android:textColorPrimary"
+            android:textColorHint="?android:textColorSecondary"
             android:inputType="numberDecimal"
             android:minHeight="48dp"
             android:layout_marginBottom="12dp"/>
@@ -93,8 +94,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Description"
-            android:textColor="@color/black"
-            android:textColorHint="@color/gray_text"
+            android:textColor="?android:textColorPrimary"
+            android:textColorHint="?android:textColorSecondary"
             android:gravity="top"
             android:lines="4"
             android:minHeight="100dp"

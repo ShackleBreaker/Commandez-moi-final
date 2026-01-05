@@ -17,6 +17,7 @@ import com.example.commandez_moi.adapters.ManageProductAdapter;
 import com.example.commandez_moi.models.Product;
 import com.example.commandez_moi.models.User;
 import com.example.commandez_moi.services.DatabaseService;
+import com.example.commandez_moi.utils.ThemeManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +34,7 @@ public class ManageProductsActivity extends AppCompatActivity implements ManageP
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_manage_products);
 
         db = DatabaseService.getInstance(this);

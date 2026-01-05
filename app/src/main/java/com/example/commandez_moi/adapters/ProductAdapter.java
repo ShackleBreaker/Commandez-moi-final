@@ -29,32 +29,10 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
         void onFavoriteClick(Product product, int position);
     }
 
-    // Ancien interface pour compatibilité
-    public interface OnItemClickListener {
-        void onItemClick(Product product);
-    }
-
     public ProductAdapter(Context context, List<Product> products, OnProductClickListener listener) {
         this.context = context;
         this.products = products;
         this.listener = listener;
-    }
-
-    // Constructeur pour compatibilité avec l'ancien interface
-    public ProductAdapter(Context context, List<Product> products, OnItemClickListener oldListener) {
-        this.context = context;
-        this.products = products;
-        this.listener = new OnProductClickListener() {
-            @Override
-            public void onProductClick(Product product) {
-                oldListener.onItemClick(product);
-            }
-
-            @Override
-            public void onFavoriteClick(Product product, int position) {
-                // Ne rien faire par défaut
-            }
-        };
     }
 
     @NonNull

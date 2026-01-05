@@ -11,7 +11,7 @@
         android:text="Donner mon avis"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="@color/black"
+        android:textColor="?android:textColorPrimary"
         android:layout_marginBottom="16dp" />
 
     <TextView
@@ -41,8 +41,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Votre commentaire..."
-            android:textColor="@color/black"
-            android:textColorHint="@color/gray_text"
+            android:textColor="?android:textColorPrimary"
+            android:textColorHint="?android:textColorSecondary"
             android:minLines="3"
             android:gravity="top"
             android:inputType="textMultiLine" />

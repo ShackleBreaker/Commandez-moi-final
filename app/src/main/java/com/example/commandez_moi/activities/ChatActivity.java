@@ -18,6 +18,7 @@ import com.bumptech.glide.Glide;
 import com.example.commandez_moi.R;
 import com.example.commandez_moi.adapters.MessageAdapter;
 import com.example.commandez_moi.models.Conversation;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.example.commandez_moi.models.Message;
 import com.example.commandez_moi.models.Product;
 import com.example.commandez_moi.models.User;
@@ -52,6 +53,7 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_chat);
 
         db = DatabaseService.getInstance(this);

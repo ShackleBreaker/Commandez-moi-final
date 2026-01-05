@@ -17,6 +17,7 @@ import com.example.commandez_moi.models.CartItem;
 import com.example.commandez_moi.models.Order;
 import com.example.commandez_moi.models.User;
 import com.example.commandez_moi.services.DatabaseService;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.example.commandez_moi.utils.ImageUtils;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ public class SellerDashboardActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_seller_dashboard);
 
         db = DatabaseService.getInstance(this);
@@ -156,5 +158,15 @@ public class SellerDashboardActivity extends AppCompatActivity {
         db.updateOrderItemStatus(orderId, itemId, status);
         Toast.makeText(this, "Statut mis à jour : " + status, Toast.LENGTH_SHORT).show();
         loadSales(); // Recharger la liste
+
+        if ("Confirmé".equals(status)) {
+            // Simulation : Passage automatique à "Livré" après 1 minute
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                db.updateOrderItemStatus(orderId, itemId, "Livré");
+                // Si l'activité est toujours visible, on pourrait rafraîchir,
+                // mais comme c'est asynchrone, on laisse l'utilisateur rafraîchir manuellement
+                // ou au prochain chargement.
+            }, 60000); // 60000 ms = 1 minute
+        }
     }
 }

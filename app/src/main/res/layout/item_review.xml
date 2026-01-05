@@ -42,7 +42,7 @@
                     android:text="Utilisateur"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:textColor="@color/black" />
+                    android:textColor="?android:textColorPrimary" />
 
                 <TextView
                     android:id="@+id/tvDate"
@@ -70,7 +70,7 @@
             android:layout_height="wrap_content"
             android:text="Commentaire de l'utilisateur..."
             android:textSize="14sp"
-            android:textColor="#424242"
+            android:textColor="?android:textColorSecondary"
             android:layout_marginTop="12dp"
             android:lineSpacingMultiplier="1.2" />
 

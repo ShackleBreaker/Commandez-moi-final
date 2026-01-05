@@ -19,6 +19,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import com.example.commandez_moi.utils.ThemeManager;
 
 import com.example.commandez_moi.R;
 import com.example.commandez_moi.models.Product;
@@ -50,6 +51,7 @@ public class AddProductActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_add_product);
 
         db = DatabaseService.getInstance(this);
@@ -78,11 +80,13 @@ public class AddProductActivity extends AppCompatActivity {
 
         // Bouton localisation
         if (btnGetLocation != null) {
-            btnGetLocation.setOnClickListener(v -> getProductLocation());
+            btnGetLocation.setOnClickListener(v -> showLocationDialog());
         }
 
-        // Récupérer automatiquement la localisation
-        getProductLocation();
+        // Récupérer automatiquement la localisation au démarrage si pas encore définie
+        if (productLocation.isEmpty()) {
+            getCurrentLocation();
+        }
 
         // 1. Ouvrir la galerie
         btnUpload.setOnClickListener(v -> {
@@ -133,39 +137,77 @@ public class AddProductActivity extends AppCompatActivity {
         });
     }
 
-    private void getProductLocation() {
+    private void showLocationDialog() {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Définir la localisation du produit");
+
+        final EditText input = new EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+        input.setHint("Entrez une ville ou adresse");
+        if (!productLocation.isEmpty()) {
+            input.setText(productLocation);
+        }
+        builder.setView(input);
+
+        builder.setPositiveButton("Valider l'adresse", (dialog, which) -> {
+            String address = input.getText().toString().trim();
+            if (!address.isEmpty()) {
+                getLocationFromAddress(address);
+            }
+        });
+
+        builder.setNeutralButton("Utiliser ma position GPS", (dialog, which) -> {
+            getCurrentLocation();
+        });
+
+        builder.setNegativeButton("Annuler", (dialog, which) -> dialog.cancel());
+
+        builder.show();
+    }
+
+    private void getLocationFromAddress(String addressStr) {
+        if (btnGetLocation != null) {
+            btnGetLocation.setText("Recherche...");
+            btnGetLocation.setEnabled(false);
+        }
+
+        locationHelper.getCoordinatesFromAddress(addressStr, new LocationHelper.LocationListener() {
+            @Override
+            public void onLocationReceived(double latitude, double longitude, String address) {
+                updateLocationUI(latitude, longitude, address);
+            }
+
+            @Override
+            public void onLocationError(String error) {
+                // Fallback: on garde l'adresse texte même sans coordonnées précises
+                updateLocationUI(0, 0, addressStr);
+                Toast.makeText(AddProductActivity.this, "Coordonnées non trouvées, adresse textuelle utilisée",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void getCurrentLocation() {
         if (locationHelper.hasLocationPermission()) {
             if (btnGetLocation != null) {
-                btnGetLocation.setText("Localisation...");
+                btnGetLocation.setText("Localisation en cours...");
                 btnGetLocation.setEnabled(false);
             }
 
             locationHelper.getCurrentLocation(new LocationHelper.LocationListener() {
                 @Override
                 public void onLocationReceived(double latitude, double longitude, String address) {
-                    productLatitude = latitude;
-                    productLongitude = longitude;
-                    productLocation = address;
-
-                    runOnUiThread(() -> {
-                        if (tvLocation != null) {
-                            tvLocation.setVisibility(View.VISIBLE);
-                            tvLocation.setText("📍 " + address);
-                        }
-                        if (btnGetLocation != null) {
-                            btnGetLocation.setText("Changer la localisation");
-                            btnGetLocation.setEnabled(true);
-                        }
-                    });
+                    updateLocationUI(latitude, longitude, address);
                 }
 
                 @Override
                 public void onLocationError(String error) {
                     runOnUiThread(() -> {
                         if (btnGetLocation != null) {
-                            btnGetLocation.setText("Ajouter ma localisation");
+                            btnGetLocation.setText("Définir la localisation");
                             btnGetLocation.setEnabled(true);
                         }
+                        Toast.makeText(AddProductActivity.this, "Erreur GPS: " + error, Toast.LENGTH_SHORT).show();
                     });
                 }
             });
@@ -174,13 +216,30 @@ public class AddProductActivity extends AppCompatActivity {
         }
     }
 
+    private void updateLocationUI(double latitude, double longitude, String address) {
+        productLatitude = latitude;
+        productLongitude = longitude;
+        productLocation = address;
+
+        runOnUiThread(() -> {
+            if (tvLocation != null) {
+                tvLocation.setVisibility(View.VISIBLE);
+                tvLocation.setText("📍 " + address);
+            }
+            if (btnGetLocation != null) {
+                btnGetLocation.setText("Modifier la localisation");
+                btnGetLocation.setEnabled(true);
+            }
+        });
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
             @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LocationHelper.LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                getProductLocation();
+                getCurrentLocation();
             }
         }
     }

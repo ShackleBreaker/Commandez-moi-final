@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:text="Message"
             android:textSize="14sp"
-            android:textColor="@color/black"/>
+            android:textColor="?android:textColorPrimary"/>
 
         <TextView
             android:id="@+id/tvTime"

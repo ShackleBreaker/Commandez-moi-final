@@ -4,12 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/gray_bg">
+    android:background="?android:colorBackground">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/white">
+        android:background="?colorSurface">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -76,7 +76,7 @@
                         android:text="Utilisateur"
                         android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/black"
+                        android:textColor="?android:textColorPrimary"
                         android:layout_marginTop="12dp"/>
 
                     <TextView
@@ -85,7 +85,7 @@
                         android:layout_height="wrap_content"
                         android:text="email@example.com"
                         android:textSize="14sp"
-                        android:textColor="#757575"
+                        android:textColor="?android:textColorSecondary"
                         android:layout_marginTop="4dp"/>
 
                     <TextView
@@ -98,6 +98,41 @@
                         android:textColor="@color/purple_700"
                         android:background="@drawable/bg_role_purple"
                         android:paddingHorizontal="16dp"
+                        android:paddingVertical="4dp"
+                        android:layout_marginTop="8dp"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_location"
+                            app:tint="#757575"/>
+
+                        <TextView
+                            android:id="@+id/userLocation"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Localisation non définie"
+                            android:textSize="14sp"
+                            android:textColor="#757575"
+                            android:layout_marginStart="4dp"/>
+
+                        <ImageView
+                            android:id="@+id/btnEditLocation"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_edit"
+                            app:tint="@color/purple_700"
+                            android:layout_marginStart="8dp"
+                            android:clickable="true"
+                            android:focusable="true"/>
+                    </LinearLayout>
                         android:paddingVertical="6dp"
                         android:layout_marginTop="12dp"/>
 

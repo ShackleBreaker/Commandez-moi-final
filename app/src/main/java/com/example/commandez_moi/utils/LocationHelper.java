@@ -160,6 +160,27 @@ public class LocationHelper {
         return "Position: " + String.format(Locale.US, "%.4f, %.4f", latitude, longitude);
     }
 
+    public void getCoordinatesFromAddress(String addressStr, LocationListener listener) {
+        new Thread(() -> {
+            Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+            try {
+                List<Address> addresses = geocoder.getFromLocationName(addressStr, 1);
+                if (addresses != null && !addresses.isEmpty()) {
+                    Address address = addresses.get(0);
+                    new android.os.Handler(Looper.getMainLooper()).post(() -> listener
+                            .onLocationReceived(address.getLatitude(), address.getLongitude(), addressStr));
+                } else {
+                    new android.os.Handler(Looper.getMainLooper())
+                            .post(() -> listener.onLocationError("Adresse non trouvée"));
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Erreur de géocodage", e);
+                new android.os.Handler(Looper.getMainLooper())
+                        .post(() -> listener.onLocationError("Erreur de géocodage: " + e.getMessage()));
+            }
+        }).start();
+    }
+
     /**
      * Calcule la distance entre deux points en kilomètres
      */

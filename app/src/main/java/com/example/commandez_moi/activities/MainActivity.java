@@ -15,6 +15,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -25,13 +26,26 @@ import com.example.commandez_moi.models.Product;
 import com.example.commandez_moi.models.User;
 import com.example.commandez_moi.services.DatabaseService;
 import com.example.commandez_moi.utils.LocationHelper;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.slider.Slider;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import android.widget.ImageButton;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 
 public class MainActivity extends AppCompatActivity implements ProductAdapter.OnProductClickListener {
     private RecyclerView recyclerView;
@@ -44,11 +58,26 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
     private List<Product> allProducts = new ArrayList<>();
     private SwipeRefreshLayout swipeRefresh;
     private TextView tvEmptyState;
+    private View emptyStateContainer;
     private BottomNavigationView bottomNav;
     private LocationHelper locationHelper;
     private double userLatitude = 0;
     private double userLongitude = 0;
     private boolean sortByProximity = false;
+
+    // Filter state
+    private Double minPrice = null;
+    private Double maxPrice = null;
+    private Set<String> selectedConditions = new HashSet<>();
+    private int maxDistance = 10000; // Default unlimited (10000km)
+    private boolean verifiedOnly = false;
+
+    // Sort state
+    private enum SortOption {
+        RELEVANCE, PRICE_ASC, PRICE_DESC, NEWEST, DISTANCE, RATING
+    }
+
+    private SortOption currentSortOption = SortOption.RELEVANCE;
 
     private Button btnAll, btnTech, btnMode, btnMaison, btnBeaute, btnSport;
     private Button selectedCategoryButton;
@@ -56,6 +85,8 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Appliquer le thème au cas où l'activité est restaurée directement
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_main);
 
         db = DatabaseService.getInstance(this);
@@ -69,6 +100,7 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
         recyclerView.setLayoutManager(new GridLayoutManager(this, 2));
 
         tvEmptyState = findViewById(R.id.tvEmptyState);
+        emptyStateContainer = findViewById(R.id.emptyStateContainer);
 
         // SwipeRefresh
         swipeRefresh = findViewById(R.id.swipeRefresh);
@@ -98,18 +130,19 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
             }
         });
 
+        // Boutons filtres et tri
+        ImageButton btnFilter = findViewById(R.id.btnFilter);
+        ImageButton btnSort = findViewById(R.id.btnSort);
+
+        if (btnFilter != null) {
+            btnFilter.setOnClickListener(v -> showFilterDialog());
+        }
+        if (btnSort != null) {
+            btnSort.setOnClickListener(v -> showSortDialog());
+        }
+
         // Boutons catégories
         setupCategoryButtons();
-
-        // FAB Panier
-        FloatingActionButton fabCart = findViewById(R.id.fabCart);
-        fabCart.setOnClickListener(v -> {
-            if (currentUser == null) {
-                startActivity(new Intent(this, LoginActivity.class));
-            } else {
-                startActivity(new Intent(this, CartActivity.class));
-            }
-        });
 
         // Bottom Navigation
         bottomNav = findViewById(R.id.bottomNavigation);
@@ -161,7 +194,9 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
         btnBeaute = findViewById(R.id.btnBeaute);
         btnSport = findViewById(R.id.btnSport);
 
+        // Initialiser le bouton "Tout" comme sélectionné (Noir/Blanc)
         selectedCategoryButton = btnAll;
+        updateButtonStyles();
 
         btnAll.setOnClickListener(v -> selectCategory("Tout", btnAll));
         btnTech.setOnClickListener(v -> selectCategory("Tech", btnTech));
@@ -173,43 +208,107 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
 
     private void selectCategory(String category, Button button) {
         currentCategory = category;
-
-        // Reset style de l'ancien bouton
-        if (selectedCategoryButton != null) {
-            selectedCategoryButton.setBackgroundTintList(null);
-        }
-
-        // Appliquer style au nouveau bouton
         selectedCategoryButton = button;
-
+        updateButtonStyles();
         filterProducts();
+    }
+
+    private void updateButtonStyles() {
+        Button[] allButtons = { btnAll, btnTech, btnMode, btnMaison, btnBeaute, btnSport };
+
+        for (Button btn : allButtons) {
+            if (btn == selectedCategoryButton) {
+                // Style Sélectionné : Fond Violet, Texte Blanc
+                btn.setBackgroundTintList(android.content.res.ColorStateList
+                        .valueOf(ContextCompat.getColor(this, R.color.purple_700)));
+                btn.setTextColor(android.graphics.Color.WHITE);
+            } else {
+                // Style Non Sélectionné : Fond Blanc, Texte Noir
+                btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE));
+                btn.setTextColor(android.graphics.Color.BLACK);
+            }
+        }
     }
 
     private void filterProducts() {
         List<Product> filtered = new ArrayList<>();
 
         for (Product p : allProducts) {
+            // 1. Category Filter
             boolean matchesCategory = "Tout".equals(currentCategory) ||
                     (p.getCategory() != null && p.getCategory().equalsIgnoreCase(currentCategory));
 
+            // 2. Search Filter
             boolean matchesSearch = searchQuery.isEmpty() ||
                     (p.getTitle() != null && p.getTitle().toLowerCase().contains(searchQuery)) ||
                     (p.getDescription() != null && p.getDescription().toLowerCase().contains(searchQuery));
 
-            if (matchesCategory && matchesSearch) {
+            // 3. Price Filter
+            boolean matchesPrice = true;
+            if (minPrice != null && p.getPrice() < minPrice)
+                matchesPrice = false;
+            if (maxPrice != null && p.getPrice() > maxPrice)
+                matchesPrice = false;
+
+            // 4. Condition Filter
+            boolean matchesCondition = selectedConditions.isEmpty() ||
+                    (p.getCondition() != null && selectedConditions.contains(p.getCondition()));
+
+            // 5. Distance Filter (only if user location is known)
+            boolean matchesDistance = true;
+            if (userLatitude != 0 && userLongitude != 0 && p.getLatitude() != 0 && p.getLongitude() != 0) {
+                double dist = LocationHelper.calculateDistance(userLatitude, userLongitude,
+                        p.getLatitude(), p.getLongitude());
+                if (dist > maxDistance)
+                    matchesDistance = false;
+            }
+
+            // 6. Verified Filter
+            boolean matchesVerified = true;
+            if (verifiedOnly) {
+                // Pour l'instant, on considère que "seller1" est le seul vendeur vérifié
+                // Dans une vraie app, ce serait un champ dans l'objet User ou Product
+                matchesVerified = "seller1".equals(p.getSellerId());
+            }
+
+            if (matchesCategory && matchesSearch && matchesPrice && matchesCondition && matchesDistance
+                    && matchesVerified) {
                 filtered.add(p);
             }
         }
 
-        // Trier par proximité si activé et localisation disponible
-        if (sortByProximity && userLatitude != 0 && userLongitude != 0) {
-            filtered.sort((p1, p2) -> {
-                double dist1 = LocationHelper.calculateDistance(userLatitude, userLongitude,
-                        p1.getLatitude(), p1.getLongitude());
-                double dist2 = LocationHelper.calculateDistance(userLatitude, userLongitude,
-                        p2.getLatitude(), p2.getLongitude());
-                return Double.compare(dist1, dist2);
-            });
+        // Sort
+        switch (currentSortOption) {
+            case PRICE_ASC:
+                filtered.sort(Comparator.comparingDouble(Product::getPrice));
+                break;
+            case PRICE_DESC:
+                filtered.sort((p1, p2) -> Double.compare(p2.getPrice(), p1.getPrice()));
+                break;
+            case NEWEST:
+                // Assuming higher ID means newer for now, or if there was a date field
+                filtered.sort((p1, p2) -> Integer.compare(p2.getId(), p1.getId()));
+                break;
+            case DISTANCE:
+                if (userLatitude != 0 && userLongitude != 0) {
+                    filtered.sort((p1, p2) -> {
+                        double dist1 = LocationHelper.calculateDistance(userLatitude, userLongitude,
+                                p1.getLatitude(), p1.getLongitude());
+                        double dist2 = LocationHelper.calculateDistance(userLatitude, userLongitude,
+                                p2.getLatitude(), p2.getLongitude());
+                        return Double.compare(dist1, dist2);
+                    });
+                }
+                break;
+            case RATING:
+                // Assuming rating field exists
+                filtered.sort((p1, p2) -> Float.compare(p2.getRating(), p1.getRating())); // Descending
+                break;
+            case RELEVANCE:
+            default:
+                // Default order (usually by ID desc or as fetched)
+                // If search query exists, maybe prioritize title match? For now keep simple.
+                break;
         }
 
         // Marquer les favoris
@@ -222,12 +321,20 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
 
         // Afficher/masquer l'état vide
         if (filtered.isEmpty()) {
-            if (tvEmptyState != null) {
+            if (emptyStateContainer != null) {
+                emptyStateContainer.setVisibility(View.VISIBLE);
+                if (tvEmptyState != null) {
+                    tvEmptyState.setText("Aucun produit trouvé");
+                }
+            } else if (tvEmptyState != null) {
                 tvEmptyState.setVisibility(View.VISIBLE);
                 tvEmptyState.setText("Aucun produit trouvé");
             }
             recyclerView.setVisibility(View.GONE);
         } else {
+            if (emptyStateContainer != null) {
+                emptyStateContainer.setVisibility(View.GONE);
+            }
             if (tvEmptyState != null) {
                 tvEmptyState.setVisibility(View.GONE);
             }
@@ -236,6 +343,11 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
 
         adapter = new ProductAdapter(this, filtered, this);
         recyclerView.setAdapter(adapter);
+
+        if (!filtered.isEmpty()) {
+            // Toast.makeText(this, filtered.size() + " produits trouvés",
+            // Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -265,6 +377,162 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
         }
     }
 
+    private void showFilterDialog() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        dialog.setContentView(R.layout.bottom_sheet_filters);
+
+        TextInputEditText etPriceMin = dialog.findViewById(R.id.etPriceMin);
+        TextInputEditText etPriceMax = dialog.findViewById(R.id.etPriceMax);
+        ChipGroup chipGroupCondition = dialog.findViewById(R.id.chipGroupCondition);
+        Slider sliderDistance = dialog.findViewById(R.id.sliderDistance);
+        TextView tvDistanceValue = dialog.findViewById(R.id.tvDistanceValue);
+        SwitchMaterial switchVerified = dialog.findViewById(R.id.switchVerified);
+        TextView tvReset = dialog.findViewById(R.id.tvReset);
+        Button btnApply = dialog.findViewById(R.id.btnApplyFilters);
+
+        // Init values
+        if (minPrice != null)
+            etPriceMin.setText(String.valueOf(minPrice));
+        if (maxPrice != null)
+            etPriceMax.setText(String.valueOf(maxPrice));
+
+        // Init chips
+        if (chipGroupCondition != null) {
+            for (int i = 0; i < chipGroupCondition.getChildCount(); i++) {
+                Chip chip = (Chip) chipGroupCondition.getChildAt(i);
+                if (selectedConditions.contains(chip.getText().toString())) {
+                    chip.setChecked(true);
+                }
+            }
+        }
+
+        // Init slider
+        if (sliderDistance != null && tvDistanceValue != null) {
+            int displayValue = Math.min(maxDistance, 100);
+            sliderDistance.setValue(displayValue);
+            tvDistanceValue.setText(displayValue >= 100 ? "100+ km" : displayValue + " km");
+
+            sliderDistance.addOnChangeListener((slider, value, fromUser) -> {
+                if (value >= 100) {
+                    tvDistanceValue.setText("100+ km");
+                } else {
+                    tvDistanceValue.setText((int) value + " km");
+                }
+            });
+        }
+
+        // Init switch
+        if (switchVerified != null) {
+            switchVerified.setChecked(verifiedOnly);
+        }
+
+        // Reset logic
+        if (tvReset != null) {
+            tvReset.setOnClickListener(v -> {
+                etPriceMin.setText("");
+                etPriceMax.setText("");
+                if (chipGroupCondition != null)
+                    chipGroupCondition.clearCheck();
+                if (sliderDistance != null)
+                    sliderDistance.setValue(100);
+                if (switchVerified != null)
+                    switchVerified.setChecked(false);
+            });
+        }
+
+        // Apply logic
+        if (btnApply != null) {
+            btnApply.setOnClickListener(v -> {
+                // Price
+                String minStr = etPriceMin.getText().toString();
+                String maxStr = etPriceMax.getText().toString();
+                minPrice = minStr.isEmpty() ? null : Double.parseDouble(minStr);
+                maxPrice = maxStr.isEmpty() ? null : Double.parseDouble(maxStr);
+
+                // Conditions
+                selectedConditions.clear();
+                if (chipGroupCondition != null) {
+                    for (int id : chipGroupCondition.getCheckedChipIds()) {
+                        Chip chip = dialog.findViewById(id);
+                        if (chip != null)
+                            selectedConditions.add(chip.getText().toString());
+                    }
+                }
+
+                // Distance
+                if (sliderDistance != null) {
+                    float val = sliderDistance.getValue();
+                    if (val >= 100) {
+                        maxDistance = 10000; // Unlimited
+                    } else {
+                        maxDistance = (int) val;
+                    }
+                }
+
+                // Verified
+                if (switchVerified != null) {
+                    verifiedOnly = switchVerified.isChecked();
+                }
+
+                filterProducts();
+                dialog.dismiss();
+            });
+        }
+
+        dialog.show();
+    }
+
+    private void showSortDialog() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        dialog.setContentView(R.layout.bottom_sheet_sort);
+
+        RadioGroup radioGroup = dialog.findViewById(R.id.radioGroupSort);
+
+        // Set current selection
+        if (radioGroup != null) {
+            switch (currentSortOption) {
+                case RELEVANCE:
+                    radioGroup.check(R.id.rbRelevance);
+                    break;
+                case PRICE_ASC:
+                    radioGroup.check(R.id.rbPriceLowHigh);
+                    break;
+                case PRICE_DESC:
+                    radioGroup.check(R.id.rbPriceHighLow);
+                    break;
+                case NEWEST:
+                    radioGroup.check(R.id.rbNewest);
+                    break;
+                case DISTANCE:
+                    radioGroup.check(R.id.rbDistance);
+                    break;
+                case RATING:
+                    radioGroup.check(R.id.rbRating);
+                    break;
+            }
+
+            radioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+                if (checkedId == R.id.rbRelevance)
+                    currentSortOption = SortOption.RELEVANCE;
+                else if (checkedId == R.id.rbPriceLowHigh)
+                    currentSortOption = SortOption.PRICE_ASC;
+                else if (checkedId == R.id.rbPriceHighLow)
+                    currentSortOption = SortOption.PRICE_DESC;
+                else if (checkedId == R.id.rbNewest)
+                    currentSortOption = SortOption.NEWEST;
+                else if (checkedId == R.id.rbDistance)
+                    currentSortOption = SortOption.DISTANCE;
+                else if (checkedId == R.id.rbRating)
+                    currentSortOption = SortOption.RATING;
+
+                filterProducts();
+                dialog.dismiss();
+            });
+        }
+
+        dialog.show();
+    }
+
     private void getUserLocation() {
         if (locationHelper.hasLocationPermission()) {
             locationHelper.getCurrentLocation(new LocationHelper.LocationListener() {
@@ -273,7 +541,7 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
                     userLatitude = latitude;
                     userLongitude = longitude;
                     // Recharger les produits si tri par proximité activé
-                    if (sortByProximity) {
+                    if (currentSortOption == SortOption.DISTANCE) {
                         filterProducts();
                     }
                 }
@@ -355,6 +623,12 @@ public class MainActivity extends AppCompatActivity implements ProductAdapter.On
             db.logout();
             currentUser = null;
             invalidateOptionsMenu();
+
+            // Rediriger vers l'écran de connexion
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
             return true;
         } else if (id == R.id.action_add_product) {
             startActivity(new Intent(this, AddProductActivity.class));

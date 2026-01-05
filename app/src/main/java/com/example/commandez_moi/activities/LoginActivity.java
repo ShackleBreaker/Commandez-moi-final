@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.commandez_moi.R;
 import com.example.commandez_moi.models.User;
 import com.example.commandez_moi.services.DatabaseService;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.List;
@@ -36,6 +37,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_login);
 
         dbService = DatabaseService.getInstance(this);
@@ -99,12 +101,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void redirectToHome(User user) {
-        Intent intent;
-        if ("seller".equals(user.getRole())) {
-            intent = new Intent(this, SellerDashboardActivity.class);
-        } else {
-            intent = new Intent(this, MainActivity.class);
-        }
+        Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
@@ -129,18 +126,14 @@ public class LoginActivity extends AppCompatActivity {
         String role = selectedRole.getId() == R.id.radioBuyer ? "buyer" : "seller";
 
         // Vérifier si l'email existe déjà
-        List<User> users = dbService.getUsers();
-        for (User u : users) {
-            if (u.getEmail().equalsIgnoreCase(email)) {
-                Toast.makeText(this, "Cet email est déjà utilisé", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        if (dbService.emailExists(email)) {
+            Toast.makeText(this, "Cet email est déjà utilisé", Toast.LENGTH_SHORT).show();
+            return;
         }
 
         // Créer le nouvel utilisateur
         User newUser = new User(UUID.randomUUID().toString(), email, password, role);
-        users.add(newUser);
-        dbService.saveUsers(users);
+        dbService.registerUser(newUser);
         dbService.setCurrentUser(newUser);
 
         Toast.makeText(this, "Inscription réussie ! Connecté en tant que " + role, Toast.LENGTH_SHORT).show();

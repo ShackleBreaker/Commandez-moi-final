@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/gray_bg">
+    android:background="?android:colorBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -19,7 +19,8 @@
                 android:id="@+id/viewPagerImages"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#EEE"/>
+                android:background="?android:colorBackground"
+                android:visibility="gone"/>
 
             <!-- Fallback single image -->
             <ImageView
@@ -27,8 +28,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop"
-                android:background="#EEE"
-                android:visibility="gone"/>
+                android:background="?android:colorBackground"
+                android:visibility="visible"/>
 
             <!-- Bouton retour -->
             <ImageView
@@ -117,7 +118,7 @@
                     android:text="Titre"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="@color/black"/>
+                    android:textColor="?android:textColorPrimary"/>
 
                 <TextView
                     android:id="@+id/tvDetailPrice"
@@ -194,7 +195,7 @@
                     android:text="0.0"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="@color/black"
+                    android:textColor="?android:textColorPrimary"
                     android:layout_marginStart="4dp"/>
 
                 <TextView
@@ -228,7 +229,7 @@
                 android:text="Description"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="@color/black"
+                android:textColor="?android:textColorPrimary"
                 android:layout_marginTop="20dp"/>
 
             <TextView
@@ -277,7 +278,7 @@
                             android:text="Vendeur"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:textColor="@color/black"/>
+                            android:textColor="?android:textColorPrimary"/>
 
                         <TextView
                             android:layout_width="wrap_content"

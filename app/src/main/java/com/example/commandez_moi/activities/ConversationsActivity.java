@@ -13,6 +13,7 @@ import com.example.commandez_moi.R;
 import com.example.commandez_moi.adapters.ConversationAdapter;
 import com.example.commandez_moi.models.Conversation;
 import com.example.commandez_moi.services.DatabaseService;
+import com.example.commandez_moi.utils.ThemeManager;
 import com.google.android.material.appbar.MaterialToolbar;
 
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public class ConversationsActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.applyTheme(this);
         setContentView(R.layout.activity_conversations);
 
         db = DatabaseService.getInstance(this);
